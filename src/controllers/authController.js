@@ -6,7 +6,7 @@ const { PrismaPg } = require('@prisma/adapter-pg');
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 const register = async (req, res) => {
-  const { email, password, nom, role, telephone } = req.body;
+  const { email, password, nom, role, telephone, categorieSlug } = req.body;
 
   if (!email || !password || !nom) {
     return res.status(400).json({ message: 'Email, mot de passe et nom sont obligatoires' });
@@ -16,6 +16,9 @@ const register = async (req, res) => {
     const userExistant = await prisma.user.findUnique({ where: { email } });
     if (userExistant) {
       return res.status(400).json({ message: 'Cet email est déjà utilisé' });
+    }
+    if (role === 'PRESTATAIRE' && !categorieSlug) {
+    return res.status(400).json({ message: 'Une prestataire doit choisir sa catégorie de service' });
     }
 
     const passwordHashe = await bcrypt.hash(password, 10);
@@ -27,6 +30,7 @@ const register = async (req, res) => {
         nom,
         role: role || 'CLIENT',
         telephone: telephone || null,
+        categorieSlug: role === 'PRESTATAIRE' ? categorieSlug : null,
       }
     });
 
@@ -44,6 +48,7 @@ const register = async (req, res) => {
         email: user.email,
         nom: user.nom,
         role: user.role,
+        categorieSlug: user.categorieSlug,
       }
     });
 
@@ -85,6 +90,7 @@ const login = async (req, res) => {
         email: user.email,
         nom: user.nom,
         role: user.role,
+        categorieSlug: user.categorieSlug,
       }
     });
 
@@ -105,6 +111,7 @@ const getMe = async (req, res) => {
         role: true,
         telephone: true,
         avatar: true,
+        categorieSlug: true,
         createdAt: true,
       }
     });
